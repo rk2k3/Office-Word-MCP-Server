@@ -61,11 +61,25 @@ def create_document_copy(source_path: str, dest_path: Optional[str] = None) -> T
         # Generate a new filename if not provided
         base, ext = os.path.splitext(source_path)
         dest_path = f"{base}_copy{ext}"
-    
+
+    # Validate both paths stay within the workspace directory
+    workspace = os.path.realpath(os.getcwd())
+    resolved_source = os.path.realpath(source_path)
+    resolved_dest = os.path.realpath(dest_path)
+    if not (resolved_source == workspace or resolved_source.startswith(workspace + os.sep)):
+        return False, f"Source path {source_path} is outside the workspace directory", None
+    if not (resolved_dest == workspace or resolved_dest.startswith(workspace + os.sep)):
+        return False, f"Destination path {dest_path} is outside the workspace directory", None
+
+    # Check destination is writable
+    writable, err = check_file_writeable(resolved_dest)
+    if not writable:
+        return False, f"Cannot write to destination: {err}", None
+
     try:
         # Simple file copy
-        shutil.copy2(source_path, dest_path)
-        return True, f"Document copied to {dest_path}", dest_path
+        shutil.copy2(resolved_source, resolved_dest)
+        return True, f"Document copied to {resolved_dest}", resolved_dest
     except Exception as e:
         return False, f"Failed to copy document: {str(e)}", None
 

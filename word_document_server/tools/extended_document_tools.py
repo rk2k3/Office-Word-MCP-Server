@@ -76,6 +76,9 @@ async def convert_to_pdf(filename: str, output_filename: Optional[str] = None) -
     if not os.path.exists(filename):
         return f"Document {filename} does not exist"
     
+    if filename.startswith('-'):
+        return f"Invalid filename: filenames starting with '-' are not allowed"
+    
     # Generate output filename if not provided
     if not output_filename:
         base_name, _ = os.path.splitext(filename)
@@ -86,7 +89,14 @@ async def convert_to_pdf(filename: str, output_filename: Optional[str] = None) -
     # Convert to absolute path if not already
     if not os.path.isabs(output_filename):
         output_filename = os.path.abspath(output_filename)
-    
+
+    # Validate output path is within working directory to prevent path traversal
+    resolved_output = os.path.realpath(output_filename)
+    working_dir = os.path.realpath(os.getcwd())
+    if os.path.commonpath([resolved_output, working_dir]) != working_dir:
+        return f"Invalid output path: {output_filename} resolves outside the working directory ({working_dir})"
+    output_filename = resolved_output
+
     # Ensure the output directory exists
     output_dir = os.path.dirname(output_filename)
     if not output_dir:
@@ -128,7 +138,7 @@ async def convert_to_pdf(filename: str, output_filename: Optional[str] = None) -
                     output_dir_for_lo = os.path.dirname(output_filename) or '.'
                     os.makedirs(output_dir_for_lo, exist_ok=True)
                     
-                    cmd = [cmd_name, '--headless', '--convert-to', 'pdf', '--outdir', output_dir_for_lo, filename]
+                    cmd = [cmd_name, '--headless', '--convert-to', 'pdf', '--outdir', output_dir_for_lo, '--', filename]
                     result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
 
                     if result.returncode == 0:

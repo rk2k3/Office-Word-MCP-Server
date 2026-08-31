@@ -26,6 +26,21 @@ from word_document_server.core.footnotes import (
 )
 
 
+def _validate_output_path(output_filename: Optional[str]) -> Optional[str]:
+    """Validate that output_filename resolves within the working directory.
+
+    Returns None if the path is safe (or not supplied — in-place edit), or an
+    error message string if the path escapes the working directory.
+    """
+    if not output_filename:
+        return None
+    base_dir = os.path.realpath(os.getcwd())
+    resolved_output = os.path.realpath(output_filename)
+    if not (resolved_output == base_dir or resolved_output.startswith(base_dir + os.sep)):
+        return "Error: output_filename must be within the server's working directory"
+    return None
+
+
 async def add_footnote_to_document(filename: str, paragraph_index: int, footnote_text: str) -> str:
     """Add a footnote to a specific paragraph in a Word document.
     
@@ -253,7 +268,11 @@ async def add_footnote_after_text(filename: str, search_text: str, footnote_text
         output_filename: Optional output filename (if None, modifies in place)
     """
     filename = ensure_docx_extension(filename)
-    
+
+    path_error = _validate_output_path(output_filename)
+    if path_error:
+        return path_error
+
     if not os.path.exists(filename):
         return f"Document {filename} does not exist"
     
@@ -290,7 +309,11 @@ async def add_footnote_before_text(filename: str, search_text: str, footnote_tex
         output_filename: Optional output filename (if None, modifies in place)
     """
     filename = ensure_docx_extension(filename)
-    
+
+    path_error = _validate_output_path(output_filename)
+    if path_error:
+        return path_error
+
     if not os.path.exists(filename):
         return f"Document {filename} does not exist"
     
@@ -327,7 +350,11 @@ async def add_footnote_enhanced(filename: str, paragraph_index: int, footnote_te
         output_filename: Optional output filename (if None, modifies in place)
     """
     filename = ensure_docx_extension(filename)
-    
+
+    path_error = _validate_output_path(output_filename)
+    if path_error:
+        return path_error
+
     # Ensure paragraph_index is an integer
     try:
         paragraph_index = int(paragraph_index)
@@ -431,7 +458,11 @@ async def delete_footnote_from_document(filename: str, footnote_id: Optional[int
         output_filename: Optional output filename (if None, modifies in place)
     """
     filename = ensure_docx_extension(filename)
-    
+
+    path_error = _validate_output_path(output_filename)
+    if path_error:
+        return path_error
+
     if not os.path.exists(filename):
         return f"Document {filename} does not exist"
     

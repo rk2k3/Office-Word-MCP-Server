@@ -17,6 +17,16 @@ from word_document_server.core.comments import (
 )
 
 
+def _resolve_safe_path(filename: str) -> Optional[str]:
+    """Resolve filename to a canonical absolute path confined to the workspace root."""
+    filename = ensure_docx_extension(filename)
+    workspace_root = os.path.realpath(os.getcwd())
+    resolved = os.path.realpath(os.path.join(workspace_root, filename))
+    if not resolved.startswith(workspace_root + os.sep) and resolved != workspace_root:
+        return None
+    return resolved
+
+
 async def get_all_comments(filename: str) -> str:
     """
     Extract all comments from a Word document.
@@ -27,14 +37,20 @@ async def get_all_comments(filename: str) -> str:
     Returns:
         JSON string containing all comments with metadata
     """
-    filename = ensure_docx_extension(filename)
-    
-    if not os.path.exists(filename):
+    safe_path = _resolve_safe_path(filename)
+    if safe_path is None:
         return json.dumps({
             'success': False,
-            'error': f'Document {filename} does not exist'
+            'error': 'Access to the specified path is denied'
         }, indent=2)
-    
+
+    if not os.path.exists(safe_path):
+        return json.dumps({
+            'success': False,
+            'error': 'Document not found'
+        }, indent=2)
+    filename = safe_path
+
     try:
         # Load the document
         doc = Document(filename)
@@ -67,14 +83,20 @@ async def get_comments_by_author(filename: str, author: str) -> str:
     Returns:
         JSON string containing filtered comments
     """
-    filename = ensure_docx_extension(filename)
-    
-    if not os.path.exists(filename):
+    safe_path = _resolve_safe_path(filename)
+    if safe_path is None:
         return json.dumps({
             'success': False,
-            'error': f'Document {filename} does not exist'
+            'error': 'Access to the specified path is denied'
         }, indent=2)
-    
+
+    if not os.path.exists(safe_path):
+        return json.dumps({
+            'success': False,
+            'error': 'Document not found'
+        }, indent=2)
+    filename = safe_path
+
     if not author or not author.strip():
         return json.dumps({
             'success': False,
@@ -117,14 +139,20 @@ async def get_comments_for_paragraph(filename: str, paragraph_index: int) -> str
     Returns:
         JSON string containing comments for the specified paragraph
     """
-    filename = ensure_docx_extension(filename)
-    
-    if not os.path.exists(filename):
+    safe_path = _resolve_safe_path(filename)
+    if safe_path is None:
         return json.dumps({
             'success': False,
-            'error': f'Document {filename} does not exist'
+            'error': 'Access to the specified path is denied'
         }, indent=2)
-    
+
+    if not os.path.exists(safe_path):
+        return json.dumps({
+            'success': False,
+            'error': 'Document not found'
+        }, indent=2)
+    filename = safe_path
+
     if paragraph_index < 0:
         return json.dumps({
             'success': False,
