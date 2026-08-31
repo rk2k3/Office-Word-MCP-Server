@@ -33,14 +33,18 @@ def remove_protection_info(filename: str, password: Optional[str] = None) -> Tup
         with open(metadata_path, 'r') as f:
             protection_data = json.load(f)
         
-        # Verify password if provided and required
-        if password and protection_data.get("password_hash"):
+        # Verify password if a password hash is stored
+        if protection_data.get("password_hash"):
+            if not password:
+                return False, "Password required to remove protection"
             password_hash = hashlib.sha256(password.encode()).hexdigest()
             if password_hash != protection_data.get("password_hash"):
                 return False, "Incorrect password"
         
         # Handle true encryption if it was applied
-        if protection_data.get("true_encryption") and password:
+        if protection_data.get("true_encryption"):
+            if not password:
+                return False, "Password required to decrypt document"
             try:
                 import msoffcrypto
                 

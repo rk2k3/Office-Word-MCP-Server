@@ -1,6 +1,7 @@
 """
 Document utility functions for Word Document Server.
 """
+import os
 import json
 from typing import Dict, List, Any
 from docx import Document
@@ -9,10 +10,24 @@ from docx.oxml.text.paragraph import CT_P
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
+# All document paths must resolve within this directory.
+_WORKSPACE_ROOT = os.path.realpath(os.environ.get("DOCUMENT_WORKSPACE_ROOT", os.getcwd()))
+
+
+def _resolve_safe_path(doc_path: str) -> str:
+    """Resolve *doc_path* and verify it stays within the workspace root."""
+    resolved = os.path.realpath(doc_path)
+    if resolved != _WORKSPACE_ROOT and not resolved.startswith(_WORKSPACE_ROOT + os.sep):
+        raise ValueError(f"Access denied: path resolves outside workspace root")
+    return resolved
+
 
 def get_document_properties(doc_path: str) -> Dict[str, Any]:
     """Get properties of a Word document."""
-    import os
+    try:
+        doc_path = _resolve_safe_path(doc_path)
+    except ValueError as e:
+        return {"error": str(e)}
     if not os.path.exists(doc_path):
         return {"error": f"Document {doc_path} does not exist"}
     
@@ -40,7 +55,10 @@ def get_document_properties(doc_path: str) -> Dict[str, Any]:
 
 def extract_document_text(doc_path: str) -> str:
     """Extract all text from a Word document."""
-    import os
+    try:
+        doc_path = _resolve_safe_path(doc_path)
+    except ValueError as e:
+        return str(e)
     if not os.path.exists(doc_path):
         return f"Document {doc_path} does not exist"
     
@@ -64,7 +82,10 @@ def extract_document_text(doc_path: str) -> str:
 
 def get_document_structure(doc_path: str) -> Dict[str, Any]:
     """Get the structure of a Word document."""
-    import os
+    try:
+        doc_path = _resolve_safe_path(doc_path)
+    except ValueError as e:
+        return {"error": str(e)}
     if not os.path.exists(doc_path):
         return {"error": f"Document {doc_path} does not exist"}
     
@@ -179,8 +200,11 @@ def find_and_replace_text(doc, old_text, new_text):
 
 def get_document_xml(doc_path: str) -> str:
     """Extract and return the raw XML structure of the Word document (word/document.xml)."""
-    import os
     import zipfile
+    try:
+        doc_path = _resolve_safe_path(doc_path)
+    except ValueError as e:
+        return str(e)
     if not os.path.exists(doc_path):
         return f"Document {doc_path} does not exist"
     try:
@@ -193,8 +217,11 @@ def get_document_xml(doc_path: str) -> str:
 
 def insert_header_near_text(doc_path: str, target_text: str = None, header_title: str = "", position: str = 'after', header_style: str = 'Heading 1', target_paragraph_index: int = None) -> str:
     """Insert a header (with specified style) before or after the target paragraph. Specify by text or paragraph index. Skips TOC paragraphs in text search."""
-    import os
     from docx import Document
+    try:
+        doc_path = _resolve_safe_path(doc_path)
+    except ValueError as e:
+        return str(e)
     if not os.path.exists(doc_path):
         return f"Document {doc_path} does not exist"
     try:
